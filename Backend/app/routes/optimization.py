@@ -1,3 +1,4 @@
+import traceback
 from fastapi import APIRouter, HTTPException, Query
 import numpy as np
 
@@ -17,6 +18,7 @@ def optimization(request: OptimizationRequest):
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
     except Exception as error:
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Optimization failed: {str(error)}",
@@ -140,6 +142,7 @@ def optimization_benchmark(
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
     except Exception as error:
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Benchmark failed: {str(error)}",

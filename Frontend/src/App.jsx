@@ -350,7 +350,9 @@ function App() {
         });
 
         if (!response.ok) {
-          throw new Error(`Vehicle ${vehicle.id} failed`);
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.detail || `Vehicle ${vehicle.id} failed`;
+          throw new Error(errMsg);
         }
 
         const data = await response.json();
