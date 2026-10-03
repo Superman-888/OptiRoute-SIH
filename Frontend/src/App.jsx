@@ -672,7 +672,7 @@ function App() {
             </aside>
 
             <div className="map-container-wrapper">
-              <MapContainer center={[12.9716, 77.5946]} zoom={12} className="map" zoomControl={true}>
+              <MapContainer center={[12.9716, 77.5946]} zoom={12} className={`map ${selectingDepot || selectingDestination ? 'selecting-mode' : ''}`} zoomControl={true}>
                 <MapResizer />
                 <MapClickHandler
                   selectingDepot={selectingDepot}

@@ -524,3 +524,10 @@ body:not(.light-mode) .leaflet-tile-pane {
 .selecting-mode .leaflet-container.leaflet-grab {
   cursor: pointer !important;
 }
+
+.selecting-mode {
+  cursor: pointer !important;
+}
+.selecting-mode .leaflet-interactive {
+  cursor: pointer !important;
+}
