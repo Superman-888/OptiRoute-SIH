@@ -118,6 +118,16 @@ function MapClickHandler({
   onDepotSelect,
   onDestinationSelect,
 }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectingDepot || selectingDestination) {
+      map.getContainer().style.cursor = "pointer";
+    } else {
+      map.getContainer().style.cursor = "";
+    }
+  }, [selectingDepot, selectingDestination, map]);
+
   useMapEvents({
     click(e) {
       const { lat, lng } = e.latlng;
