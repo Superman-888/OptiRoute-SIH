@@ -1,0 +1,28 @@
+# Python virtual environment
+venv/
+
+# Environment variables
+.env
+
+# Large raw datasets
+Backend/data/raw/*.csv
+
+# Processed datasets
+Backend/data/processed/
+
+# Trained models
+Backend/models/*.txt
+Backend/models/*.pkl
+Backend/models/*.joblib
+
+# Python cache
+__pycache__/
+*.pyc
+# Ignore all CSV datasets
+*.csv
+**/*.csv
+data/
+*.csv
+**/*.csv
+data/
+Backend/data/
