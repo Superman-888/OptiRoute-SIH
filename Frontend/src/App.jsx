@@ -221,7 +221,9 @@ function App() {
   const [stops, setStops] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const defaultApiUrl = isLocalhost ? "http://127.0.0.1:8000" : "https://optiroute-sih-4.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/traffic/metrics`)
