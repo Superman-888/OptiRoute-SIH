@@ -428,20 +428,25 @@ def optimize_routes(request: OptimizationRequest):
 
         if route.customers:
 
-            route_id = save_route(
-                vehicle_id=vehicle_id,
-                route_sequence=customer_sequence,
-                total_distance=route_distance_km,
-                total_time=float(
-                    route_time
-                ),
-                total_traffic_cost=float(
-                    route_traffic_cost
-                ),
-                fitness=float(
-                    best_fitness
+            try:
+                route_id = save_route(
+                    vehicle_id=vehicle_id,
+                    route_sequence=customer_sequence,
+                    total_distance=route_distance_km,
+                    total_time=float(
+                        route_time
+                    ),
+                    total_traffic_cost=float(
+                        route_traffic_cost
+                    ),
+                    fitness=float(
+                        best_fitness
+                    )
                 )
-            )
+            except Exception as e:
+                import logging
+                logging.error(f"Database save failed, continuing without saving: {e}")
+                route_id = None
 
         # -----------------------------------------------------
         # Frontend route response
