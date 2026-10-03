@@ -18,3 +18,18 @@ Backend/models/*.joblib
 # Python cache
 __pycache__/
 *.pyc
+# Virtual environments
+.venv/
+venv/
+
+# macOS metadata
+.DS_Store
+
+# Python test and cache files
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Frontend dependencies and build output
+node_modules/
+dist/
