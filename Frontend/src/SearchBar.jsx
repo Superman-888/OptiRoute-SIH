@@ -33,7 +33,7 @@ function SearchBar({ onSelectLocation }) {
   const performSearch = async (searchQuery) => {
     setSearching(true);
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&viewbox=77.40,13.15,77.75,12.80&bounded=0&limit=8`);
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&viewbox=77.40,13.15,77.75,12.80&bounded=1&limit=8`);
       const data = await response.json();
       setResults(data);
     } catch (error) {
