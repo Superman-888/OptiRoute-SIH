@@ -808,7 +808,7 @@ function App() {
                     <Marker
                       key={`${v.id}-${d.node_id}`}
                       position={[d.latitude, d.longitude]}
-                      icon={createSimpleDotIcon(v.color)}
+                      icon={createDestIcon(v.color, d.display_id)}
                       opacity={isFaded ? 0.3 : 1}
                       zIndexOffset={isActive ? 100 : 0}
                     >
