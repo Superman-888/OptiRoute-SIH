@@ -368,7 +368,8 @@ function App() {
            const vehicle = fleet.find(v => v.id === routeData.vehicle_id) || { color: '#888', name: `Vehicle ${routeData.vehicle_id}` };
            
            const assignedDestinations = [];
-           const rawSequence = routeData.route_sequence || routeData.sequence || routeData.route || [];
+           // The backend returns assigned customers in routeData.customers
+           const rawSequence = routeData.customers || routeData.route_sequence || routeData.sequence || routeData.route || [];
            
            if (rawSequence.length > 0) {
                rawSequence.forEach(seq => {
@@ -393,11 +394,19 @@ function App() {
                });
            }
 
-           const sequenceDisplay = (routeData.route_sequence || []).map(seq => {
-             if (seq === 'Depot') return 'Depot';
-             const dest = destinations.find(d => d.node_id === parseInt(seq));
-             return dest ? dest.display_id : seq;
-           });
+           const sequenceDisplay = ['Depot'];
+           if (rawSequence.length > 0) {
+               rawSequence.forEach(seq => {
+                   if (seq === 'Depot' || seq === 0 || seq === '0') return;
+                   const dest = destinations.find(d => d.node_id === seq || d.node_id === parseInt(seq) || d.node_id === String(seq));
+                   if (dest) {
+                       sequenceDisplay.push(dest.display_id);
+                   } else {
+                       sequenceDisplay.push(seq);
+                   }
+               });
+           }
+           sequenceDisplay.push('Depot');
 
            const safePath = (routeData.path || []).map(p => {
              if (Array.isArray(p)) return [Number(p[0]), Number(p[1])];
