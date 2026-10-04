@@ -69,10 +69,8 @@ function MapResizer() {
   const map = useMap();
 
   useEffect(() => {
-    // Invalidate size immediately
     map.invalidateSize();
 
-    // Invalidate size after small delays to catch render/CSS adjustments
     const timer1 = setTimeout(() => {
       map.invalidateSize();
     }, 150);
@@ -81,7 +79,6 @@ function MapResizer() {
       map.invalidateSize();
     }, 500);
 
-    // Watch container element for resizing
     const container = map.getContainer();
     let resizeObserver;
     if (container && window.ResizeObserver) {
@@ -174,8 +171,8 @@ function App() {
     const handleMouseMove = (e) => {
       if (!isResizing) return;
       let newWidth = e.clientX;
-      const minWidth = 320; // Prevent compressing below original size to avoid word-wrap
-      const maxWidth = window.innerWidth * 0.20; // Reduced from 30% to 20%
+      const minWidth = 320; 
+      const maxWidth = window.innerWidth * 0.20; 
       if (newWidth < minWidth) newWidth = minWidth;
       if (newWidth > maxWidth) newWidth = maxWidth;
       setSidebarWidth(newWidth);
@@ -204,15 +201,20 @@ function App() {
   const [depot, setDepot] = useState(null);
   const [selectingDepot, setSelectingDepot] = useState(false);
 
+  // Flat list of vehicles (without destinations)
   const [fleet, setFleet] = useState([
-    { id: 1, name: 'Vehicle 1', capacity: 200, color: vehicleColors[0], destinations: [] }
+    { id: 1, name: 'Vehicle 1', capacity: 200, color: vehicleColors[0] }
   ]);
-  const [activeVehicleId, setActiveVehicleId] = useState(1);
+  
+  // Flat list of destinations
+  const [destinations, setDestinations] = useState([]);
+  
   const [globalDestId, setGlobalDestId] = useState(1);
   const [selectingDestination, setSelectingDestination] = useState(false);
+  const [activeVehicleId, setActiveVehicleId] = useState(null);
 
   const [isOptimized, setIsOptimized] = useState(false);
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicles, setVehicles] = useState([]); // Results
   const [distance, setDistance] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState(0);
   const [optimizationSummary, setOptimizationSummary] = useState(null);
@@ -242,16 +244,11 @@ function App() {
   };
 
   const handleDestinationSelect = (location) => {
-    setFleet(current => {
-      const vehicle = current.find(v => v.id === activeVehicleId);
-      if (!vehicle) return current;
-
-      const vehicleLetter = String.fromCharCode(64 + vehicle.id); // 1->A, 2->B
-      const destIndex = vehicle.destinations.length + 1;
-
+    setDestinations(current => {
+      const destIndex = current.length + 1;
       const newDestination = {
         node_id: globalDestId,
-        display_id: `${vehicleLetter}${destIndex}`,
+        display_id: `${destIndex}`,
         latitude: location.latitude,
         longitude: location.longitude,
         demand: 50,
@@ -259,33 +256,25 @@ function App() {
         latest: 1000,
         service_time: 10,
       };
-      
       setGlobalDestId(prev => prev + 1);
-
-      return current.map(v => 
-        v.id === activeVehicleId 
-          ? { ...v, destinations: [...v.destinations, newDestination] } 
-          : v
-      );
+      return [...current, newDestination];
     });
   };
 
-  const updateDestinationDemand = (vehicleId, node_id, value) => {
+  const updateDestinationDemand = (node_id, value) => {
     const newDemand = Number(value);
     if (!Number.isFinite(newDemand)) return;
-    setFleet(current => current.map(v => 
-      v.id === vehicleId
-        ? { ...v, destinations: v.destinations.map(d => d.node_id === node_id ? { ...d, demand: newDemand } : d) }
-        : v
+    setDestinations(current => current.map(d => 
+      d.node_id === node_id ? { ...d, demand: newDemand } : d
     ));
   };
 
-  const removeDestination = (vehicleId, node_id) => {
-    setFleet(current => current.map(v => 
-      v.id === vehicleId
-        ? { ...v, destinations: v.destinations.filter(d => d.node_id !== node_id) }
-        : v
-    ));
+  const removeDestination = (node_id) => {
+    setDestinations(current => {
+      // Filter out and recalculate display_ids to keep them sequential 1, 2, 3...
+      const newDests = current.filter(d => d.node_id !== node_id);
+      return newDests.map((d, i) => ({...d, display_id: `${i + 1}`}));
+    });
   };
 
   const addVehicle = () => {
@@ -296,13 +285,9 @@ function App() {
         id: newId,
         name: `Vehicle ${newId}`,
         capacity: 200,
-        color: vehicleColors[current.length % vehicleColors.length],
-        destinations: []
+        color: vehicleColors[current.length % vehicleColors.length]
       }
     ]);
-    setActiveVehicleId(newId);
-    setSelectingDestination(true);
-    setSelectingDepot(false);
   };
 
   const updateVehicleCapacity = (id, value) => {
@@ -317,19 +302,22 @@ function App() {
       return;
     }
     
-    const activeFleet = fleet.filter(v => v.destinations.length > 0);
-    if (activeFleet.length === 0) {
-      alert("Please add destinations to at least one vehicle.");
+    if (destinations.length === 0) {
+      alert("Please add at least one destination.");
+      return;
+    }
+
+    if (fleet.length === 0) {
+      alert("Please add at least one vehicle.");
       return;
     }
 
     // Capacity Validation Check
-    for (const vehicle of activeFleet) {
-      const totalDemand = vehicle.destinations.reduce((sum, d) => sum + d.demand, 0);
-      if (totalDemand > vehicle.capacity) {
-        alert(`Vehicle ${vehicle.id} cannot carry ${totalDemand}kg because its capacity is only ${vehicle.capacity}kg. Please increase the vehicle's capacity or reduce the demands.`);
-        return;
-      }
+    const totalDemand = destinations.reduce((sum, d) => sum + d.demand, 0);
+    const totalCapacity = fleet.reduce((sum, v) => sum + v.capacity, 0);
+    if (totalDemand > totalCapacity) {
+      alert(`Total demand (${totalDemand}kg) exceeds total vehicle capacity (${totalCapacity}kg). Please increase capacities or add vehicles.`);
+      return;
     }
 
     setLoading(true);
@@ -337,42 +325,48 @@ function App() {
     let totalTime = 0;
     let totalStops = 0;
     let allVehiclesResult = [];
-    let hasError = false;
 
     try {
-      for (const vehicle of activeFleet) {
-        const payload = {
-          depot: { latitude: depot.latitude, longitude: depot.longitude },
-          customers: vehicle.destinations.map(d => ({
-            node_id: d.node_id,
-            latitude: d.latitude,
-            longitude: d.longitude,
-            demand: d.demand,
-            earliest: d.earliest,
-            latest: d.latest,
-            service_time: d.service_time
-          })),
-          vehicles: [{ vehicle_id: 1, capacity: vehicle.capacity }]
-        };
+      // Flat payload!
+      const payload = {
+        depot: { latitude: depot.latitude, longitude: depot.longitude },
+        customers: destinations.map(d => ({
+          node_id: d.node_id,
+          latitude: d.latitude,
+          longitude: d.longitude,
+          demand: d.demand,
+          earliest: d.earliest,
+          latest: d.latest,
+          service_time: d.service_time
+        })),
+        vehicles: fleet.map(v => ({ vehicle_id: v.id, capacity: v.capacity }))
+      };
 
-        const response = await fetch(`${API_BASE_URL}/optimization`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      const response = await fetch(`${API_BASE_URL}/optimization`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData.detail || `Vehicle ${vehicle.id} failed`;
-          throw new Error(errMsg);
-        }
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = errData.detail || `Optimization failed on backend.`;
+        throw new Error(errMsg);
+      }
 
-        const data = await response.json();
-        if (data.status === "success" && data.routes && data.routes.length > 0) {
-           const routeData = data.routes[0];
+      const data = await response.json();
+      if (data.status === "success" && data.routes && data.routes.length > 0) {
+         allVehiclesResult = data.routes.map(routeData => {
+           const vehicle = fleet.find(v => v.id === routeData.vehicle_id) || { color: '#888', name: `Vehicle ${routeData.vehicle_id}` };
+           
+           const assignedDestinations = (routeData.route_sequence || [])
+             .filter(seq => seq !== 'Depot')
+             .map(seq => destinations.find(d => d.node_id === parseInt(seq)))
+             .filter(Boolean);
+
            const sequenceDisplay = (routeData.route_sequence || []).map(seq => {
              if (seq === 'Depot') return 'Depot';
-             const dest = vehicle.destinations.find(d => d.node_id === parseInt(seq));
+             const dest = destinations.find(d => d.node_id === parseInt(seq));
              return dest ? dest.display_id : seq;
            });
 
@@ -381,40 +375,43 @@ function App() {
              return [Number(p.lat || p.latitude), Number(p.lng || p.longitude)];
            }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
            
-           allVehiclesResult.push({
+           totalDist += routeData.distance || 0;
+           totalTime += routeData.time || 0;
+           totalStops += assignedDestinations.length;
+
+           return {
              ...vehicle,
+             destinations: assignedDestinations,
              routePath: safePath,
              routeDistance: Number(routeData.distance).toFixed(2),
              routeTime: Number(routeData.time).toFixed(2),
-             totalLoad: routeData.total_demand || vehicle.destinations.reduce((s, d) => s + d.demand, 0),
+             totalLoad: routeData.total_demand || assignedDestinations.reduce((s, d) => s + d.demand, 0),
              utilization: routeData.utilization,
              sequenceDisplay: sequenceDisplay,
-             stopCount: vehicle.destinations.length
-           });
-           
-           totalDist += routeData.distance;
-           totalTime += routeData.time;
-           totalStops += vehicle.destinations.length;
-        }
-      }
-      
-      setVehicles(allVehiclesResult);
-      setDistance(totalDist.toFixed(2));
-      setEstimatedTime(totalTime.toFixed(0));
-      setStops(totalStops);
+             stopCount: assignedDestinations.length
+           };
+         });
+         
+         setVehicles(allVehiclesResult);
+         setDistance(totalDist.toFixed(2));
+         setEstimatedTime(totalTime.toFixed(0));
+         setStops(totalStops);
 
-      setOptimizationSummary({
-        vehicles_used: activeFleet.length,
-        overall_utilization: totalDist > 0 ? (allVehiclesResult.reduce((sum, v) => sum + v.totalLoad, 0) / allVehiclesResult.reduce((sum, v) => sum + v.capacity, 0)) * 100 : 0,
-        constraint_violations: 0,
-        solver_runtime_seconds: activeFleet.length > 0 ? 4.1 : 0
-      });
-      setIsOptimized(true);
-      setSelectingDestination(false);
-      setSelectingDepot(false);
-      setActiveVehicleId(null);
-      
-      alert("Routes optimized successfully.");
+         setOptimizationSummary({
+           vehicles_used: allVehiclesResult.filter(v => v.destinations.length > 0).length,
+           overall_utilization: totalDist > 0 ? (allVehiclesResult.reduce((sum, v) => sum + v.totalLoad, 0) / allVehiclesResult.reduce((sum, v) => sum + (v.capacity || 0), 0)) * 100 : 0,
+           constraint_violations: 0,
+           solver_runtime_seconds: 4.1
+         });
+         setIsOptimized(true);
+         setSelectingDestination(false);
+         setSelectingDepot(false);
+         setActiveVehicleId(null);
+         
+         alert("Routes optimized successfully.");
+      } else {
+         throw new Error("No routes returned from optimization.");
+      }
     } catch (error) {
       console.error(error);
       alert(`Optimization failed: ${error.message}`);
@@ -543,6 +540,8 @@ function App() {
                     {vehicles.map(v => {
                       const isHovered = activeVehicleId === v.id;
                       const isFaded = activeVehicleId !== null && activeVehicleId !== v.id;
+                      // Only show vehicles that got destinations assigned
+                      if (v.destinations && v.destinations.length === 0) return null;
                       return (
                       <div key={v.id} 
                         onClick={() => setActiveVehicleId(activeVehicleId === v.id ? null : v.id)}
@@ -561,7 +560,7 @@ function App() {
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
                           <div style={{display: 'flex', alignItems: 'center', gap: '8px', color: v.color, fontWeight: 'bold'}}>
                             <div style={{width: '12px', height: '12px', borderRadius: '50%', background: v.color}}></div>
-                            Vehicle {v.id}
+                            {v.name}
                           </div>
                           <div style={{fontSize: '12px', color: 'var(--text-secondary)'}}>
                             Load: {v.totalLoad} / {v.capacity} kg
@@ -570,7 +569,7 @@ function App() {
                         
                         <div style={{display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center', marginBottom: '15px', fontSize: '12px'}}>
                           <span style={{color: 'var(--text-secondary)'}}>Route:</span>
-                          {v.sequenceDisplay.map((seq, i) => (
+                          {v.sequenceDisplay && v.sequenceDisplay.map((seq, i) => (
                             <React.Fragment key={i}>
                               <span style={{background: seq === 'Depot' ? '#ea433520' : `${v.color}20`, color: seq === 'Depot' ? '#ea4335' : v.color, padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>{seq}</span>
                               {i < v.sequenceDisplay.length - 1 && <span style={{color: 'var(--text-tertiary)'}}>→</span>}
@@ -597,7 +596,10 @@ function App() {
                     <div className="sidebar-group">
                       <div className="input-group">
                         <label>Depot Location</label>
-                        <button className="btn-secondary" onClick={() => setSelectingDepot(true)}>
+                        <button className="btn-secondary" onClick={() => {
+                          setSelectingDepot(true);
+                          setSelectingDestination(false);
+                        }}>
                           {depot ? "📍 Depot Selected" : "📍 Select on Map"}
                         </button>
                         {selectingDepot && (
@@ -610,56 +612,59 @@ function App() {
 
                     <div className="sidebar-group">
                       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-                        <h3 style={{margin: 0}}>Vehicles</h3>
+                        <h3 style={{margin: 0}}>Destinations Pool</h3>
+                      </div>
+                      
+                      <button
+                        className={selectingDestination ? "btn-primary" : "btn-secondary"}
+                        style={{width: '100%', marginBottom: '15px', padding: '10px'}}
+                        onClick={() => {
+                          setSelectingDestination(!selectingDestination);
+                          if (!selectingDestination) setSelectingDepot(false);
+                        }}
+                      >
+                        {selectingDestination ? "Click Map to Add... (Stop)" : "+ Add Destinations (Map)"}
+                      </button>
+
+                      {destinations.length > 0 && (
+                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px'}}>
+                          {destinations.map(d => (
+                            <div key={d.node_id} style={{background: 'var(--bg-secondary)', border: `1px solid var(--border-color)`, borderRadius: '12px', padding: '4px 10px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                              <span style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>Pt {d.display_id}</span>
+                              <input 
+                                type="number" 
+                                value={d.demand} 
+                                onChange={(e) => updateDestinationDemand(d.node_id, e.target.value)}
+                                style={{width: '50px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', outline: 'none', textAlign: 'center', fontSize: '12px', padding: '2px'}}
+                                title="Demand (kg)"
+                              />
+                              <span style={{color: 'var(--text-secondary)'}}>kg</span>
+                              <span onClick={() => removeDestination(d.node_id)} style={{cursor: 'pointer', color: '#ff4444', marginLeft: '6px', fontSize: '16px', fontWeight: 'bold'}}>×</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="sidebar-group">
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                        <h3 style={{margin: 0}}>Available Fleet</h3>
                       </div>
                       
                       {fleet.map((v) => (
-                        <div key={v.id} style={{border: `1px solid ${v.color}50`, borderRadius: '8px', padding: '12px', marginBottom: '15px', background: activeVehicleId === v.id ? `${v.color}10` : 'transparent'}}>
-                          <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '10px'}} onClick={() => setActiveVehicleId(v.id)}>
-                            <div style={{fontWeight: 'bold', color: v.color, whiteSpace: 'nowrap'}}>{v.name}</div>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '6px'}} onClick={(e) => e.stopPropagation()}>
-                              <span style={{fontSize: '11px', color: 'var(--text-secondary)'}}>Capacity:</span>
-                              <input 
-                                type="number" 
-                                style={{width: '60px', padding: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px'}}
-                                value={v.capacity}
-                                onChange={(e) => updateVehicleCapacity(v.id, e.target.value)}
-                                title="Capacity (kg)"
-                              />
-                            </div>
+                        <div key={v.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: `1px solid ${v.color}50`, borderRadius: '8px', padding: '10px 12px', marginBottom: '10px', background: `${v.color}10`}}>
+                          <div style={{fontWeight: 'bold', color: v.color}}>{v.name}</div>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                            <span style={{fontSize: '11px', color: 'var(--text-secondary)'}}>Capacity:</span>
+                            <input 
+                              type="number" 
+                              style={{width: '60px', padding: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px'}}
+                              value={v.capacity}
+                              onChange={(e) => updateVehicleCapacity(v.id, e.target.value)}
+                              title="Capacity (kg)"
+                            />
+                            <span style={{fontSize: '11px', color: 'var(--text-secondary)'}}>kg</span>
                           </div>
-                          
-                          {activeVehicleId === v.id && (
-                            <>
-                              <button
-                                className={selectingDestination ? "btn-primary" : "btn-secondary"}
-                                style={{width: '100%', marginBottom: '10px', fontSize: '13px', padding: '6px'}}
-                                onClick={() => {
-                                  setSelectingDestination(!selectingDestination);
-                                  if (!selectingDestination) setSelectingDepot(false);
-                                }}
-                              >
-                                {selectingDestination ? "Stop Adding" : "+ Add Destinations"}
-                              </button>
-                              
-                              <div style={{display: 'flex', flexWrap: 'wrap', gap: '5px'}}>
-                                {v.destinations.map(d => (
-                                  <div key={d.node_id} style={{background: 'var(--bg-secondary)', border: `1px solid ${v.color}40`, borderRadius: '12px', padding: '2px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px'}}>
-                                    <span style={{color: v.color, fontWeight: 'bold'}}>{d.display_id}</span>
-                                    <input 
-                                      type="number" 
-                                      value={d.demand} 
-                                      onChange={(e) => updateDestinationDemand(v.id, d.node_id, e.target.value)}
-                                      style={{width: '45px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', outline: 'none', textAlign: 'center', fontSize: '11px', padding: '2px'}}
-                                      title="Demand (kg)"
-                                    />
-                                    <span style={{color: 'var(--text-secondary)'}}>kg</span>
-                                    <span onClick={() => removeDestination(v.id, d.node_id)} style={{cursor: 'pointer', color: '#ff4444', marginLeft: '4px', fontSize: '14px', fontWeight: 'bold'}}>×</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </>
-                          )}
                         </div>
                       ))}
                       
@@ -723,31 +728,7 @@ function App() {
                       </div>
                       <div>
                         <div style={{fontSize: '11px', color: '#aaa'}}>Vehicles</div>
-                        <div style={{fontSize: '15px', fontWeight: 'bold'}}>{vehicles.length}</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {isOptimized && (
-                  <div className="results-overlay" style={{position: 'absolute', top: '20px', right: '20px', zIndex: 1000, background: 'rgba(20,20,20,0.85)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(10px)', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', minWidth: '220px'}}>
-                    <h3 style={{margin: '0 0 10px 0', fontSize: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px'}}>Optimization Results</h3>
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
-                      <div>
-                        <div style={{fontSize: '11px', color: '#aaa'}}>Total Distance</div>
-                        <div style={{fontSize: '15px', fontWeight: 'bold'}}>{distance} km</div>
-                      </div>
-                      <div>
-                        <div style={{fontSize: '11px', color: '#aaa'}}>Total Time</div>
-                        <div style={{fontSize: '15px', fontWeight: 'bold'}}>{estimatedTime} min</div>
-                      </div>
-                      <div>
-                        <div style={{fontSize: '11px', color: '#aaa'}}>Destinations</div>
-                        <div style={{fontSize: '15px', fontWeight: 'bold'}}>{stops}</div>
-                      </div>
-                      <div>
-                        <div style={{fontSize: '11px', color: '#aaa'}}>Vehicles</div>
-                        <div style={{fontSize: '15px', fontWeight: 'bold'}}>{vehicles.length}</div>
+                        <div style={{fontSize: '15px', fontWeight: 'bold'}}>{vehicles.filter(v => v.destinations && v.destinations.length > 0).length}</div>
                       </div>
                     </div>
                   </div>
@@ -766,62 +747,58 @@ function App() {
                   </Marker>
                 )}
 
-                {!isOptimized && fleet.map(v => 
-                  v.destinations.map(d => (
-                    <Marker
-                      key={d.node_id}
-                      position={[d.latitude, d.longitude]}
-                      icon={createDestIcon(v.color, d.display_id)}
-                    >
-                      <Popup>
-                        <strong>{d.display_id}</strong><br/>
-                        Vehicle: {v.name}<br/>
-                        Demand: {d.demand} kg
-                      </Popup>
-                    </Marker>
-                  ))
-                )}
+                {/* Pre-optimization destinations: all rendered with a neutral primary color since they aren't assigned to vehicles yet */}
+                {!isOptimized && destinations.map(d => (
+                  <Marker
+                    key={d.node_id}
+                    position={[d.latitude, d.longitude]}
+                    icon={createDestIcon('#1a73e8', d.display_id)}
+                  >
+                    <Popup>
+                      <strong>Destination {d.display_id}</strong><br/>
+                      Demand: {d.demand} kg
+                    </Popup>
+                  </Marker>
+                ))}
                 
+                {/* Post-optimization destinations: rendered with the assigned vehicle's color */}
                 {isOptimized && vehicles.map(v => {
                   const isFaded = activeVehicleId !== null && activeVehicleId !== v.id;
                   const isActive = activeVehicleId === v.id;
+                  if (!v.destinations) return null;
                   return v.destinations.map(d => (
                     <Marker
-                      key={d.node_id}
+                      key={`${v.id}-${d.node_id}`}
                       position={[d.latitude, d.longitude]}
                       icon={createDestIcon(v.color, d.display_id)}
                       opacity={isFaded ? 0.3 : 1}
                       zIndexOffset={isActive ? 100 : 0}
                     >
                       <Popup>
-                        <strong>{d.display_id}</strong><br/>
-                        Vehicle: {v.name}<br/>
+                        <strong>Destination {d.display_id}</strong><br/>
+                        Assigned to: {v.name}<br/>
                         Demand: {d.demand} kg
                       </Popup>
                     </Marker>
                   ));
                 })}
-
-                {isOptimized && [...vehicles].sort((a, b) => (activeVehicleId === a.id ? 1 : (activeVehicleId === b.id ? -1 : 0))).map((vehicle) => {
-                  const isActive = activeVehicleId === null || activeVehicleId === vehicle.id;
-                  const isFaded = activeVehicleId !== null && activeVehicleId !== vehicle.id;
+                
+                {isOptimized && vehicles.map(v => {
+                  if (!v.routePath || v.routePath.length === 0) return null;
+                  const isFaded = activeVehicleId !== null && activeVehicleId !== v.id;
+                  const isActive = activeVehicleId === v.id;
                   return (
-                  <React.Fragment key={`${vehicle.id}-${activeVehicleId}`}>
                     <Polyline
-                      positions={vehicle.routePath}
-                      color="#ffffff"
-                      weight={isActive ? 8 : 4}
-                      opacity={isFaded ? 0.05 : 1}
+                      key={v.id}
+                      positions={v.routePath}
+                      color={v.color}
+                      weight={isActive ? 5 : 3}
+                      opacity={isFaded ? 0.2 : 0.8}
+                      dashArray={isActive ? null : "5, 10"}
                     />
-                    <Polyline
-                      positions={vehicle.routePath}
-                      color={vehicle.color}
-                      weight={isActive ? 4 : 3}
-                      opacity={isFaded ? 0.2 : 1}
-                    />
-                  </React.Fragment>
                   );
                 })}
+
               </MapContainer>
             </div>
           </div>
@@ -834,7 +811,7 @@ function App() {
               capacities={fleet.map(v => v.capacity)}
               summary={optimizationSummary}
               convergenceHistory={convergenceHistory}
-              nodes={stops}
+              nodes={destinations}
               mlMetrics={mlMetrics}
             />
           </div>
