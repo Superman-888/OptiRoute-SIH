@@ -394,18 +394,18 @@ function App() {
                });
            }
 
+           const vehicleLetter = String.fromCharCode(64 + (vehicle.id || 1)); // 1->A, 2->B
+           
+           const remappedDestinations = assignedDestinations.map((d, idx) => ({
+             ...d,
+             original_display_id: d.display_id,
+             display_id: `${vehicleLetter}${idx + 1}`
+           }));
+
            const sequenceDisplay = ['Depot'];
-           if (rawSequence.length > 0) {
-               rawSequence.forEach(seq => {
-                   if (seq === 'Depot' || seq === 0 || seq === '0') return;
-                   const dest = destinations.find(d => d.node_id === seq || d.node_id === parseInt(seq) || d.node_id === String(seq));
-                   if (dest) {
-                       sequenceDisplay.push(dest.display_id);
-                   } else {
-                       sequenceDisplay.push(seq);
-                   }
-               });
-           }
+           remappedDestinations.forEach(d => {
+               sequenceDisplay.push(d.display_id);
+           });
            sequenceDisplay.push('Depot');
 
            const safePath = (routeData.path || []).map(p => {
@@ -415,18 +415,18 @@ function App() {
            
            totalDist += routeData.distance || 0;
            totalTime += routeData.time || 0;
-           totalStops += assignedDestinations.length;
+           totalStops += remappedDestinations.length;
 
            return {
              ...vehicle,
-             destinations: assignedDestinations,
+             destinations: remappedDestinations,
              routePath: safePath,
              routeDistance: Number(routeData.distance).toFixed(2),
              routeTime: Number(routeData.time).toFixed(2),
-             totalLoad: routeData.total_demand || assignedDestinations.reduce((s, d) => s + d.demand, 0),
+             totalLoad: routeData.total_demand || remappedDestinations.reduce((s, d) => s + d.demand, 0),
              utilization: routeData.utilization,
              sequenceDisplay: sequenceDisplay,
-             stopCount: assignedDestinations.length
+             stopCount: remappedDestinations.length
            };
          });
          
