@@ -362,11 +362,26 @@ function App() {
         vehicles: fleet.map(v => ({ vehicle_id: v.id, capacity: v.capacity }))
       };
 
-      const response = await fetch(`${API_BASE_URL}/optimization`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // Set a 120-second timeout for the optimization request due to CPU-heavy calculations
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+      let response;
+      try {
+        response = await fetch(`${API_BASE_URL}/optimization`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          throw new Error("Optimization timed out (120s). The server's CPU may be heavily loaded.");
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
