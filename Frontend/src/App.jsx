@@ -828,16 +828,14 @@ function App() {
                   return (
                     <React.Fragment key={v.id}>
                       {/* Outline / Border */}
-                      {!isFaded && (
-                        <Polyline
-                          positions={v.routePath}
-                          color="#ffffff"
-                          weight={isActive ? 12 : 9}
-                          opacity={1.0}
-                          lineCap="round"
-                          lineJoin="round"
-                        />
-                      )}
+                      <Polyline
+                        positions={v.routePath}
+                        color="#ffffff"
+                        weight={isActive ? 12 : 9}
+                        opacity={isFaded ? 0.15 : 1.0}
+                        lineCap="round"
+                        lineJoin="round"
+                      />
                       {/* Inner Colored Route */}
                       <Polyline
                         positions={v.routePath}
