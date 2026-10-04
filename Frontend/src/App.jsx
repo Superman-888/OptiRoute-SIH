@@ -766,12 +766,13 @@ function App() {
                   onDestinationSelect={handleDestinationSelect}
                 />
                 
-                {!isOptimized && (selectingDepot || selectingDestination) && (
+                {!isOptimized && (
                   <SearchBar 
                     onSelectLocation={(loc) => {
                       if (selectingDepot) {
                         handleDepotSelect(loc);
-                      } else if (selectingDestination) {
+                      } else {
+                        // Default to destination if nothing explicitly selected
                         handleDestinationSelect(loc);
                       }
                     }} 
