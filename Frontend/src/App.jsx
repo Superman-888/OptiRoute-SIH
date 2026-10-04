@@ -60,6 +60,14 @@ const createDestIcon = (color, label) => new L.divIcon({
   popupAnchor: [0, -48]
 });
 
+const createSimpleDotIcon = (color) => new L.divIcon({
+  className: 'custom-dot-icon',
+  html: `<div style="width: 16px; height: 16px; background: ${color}; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+  popupAnchor: [0, -8]
+});
+
 
 /* =========================================================
    MAP RESIZE HANDLER (Fixes grey/unloaded Leaflet tiles)
@@ -359,10 +367,31 @@ function App() {
          allVehiclesResult = data.routes.map(routeData => {
            const vehicle = fleet.find(v => v.id === routeData.vehicle_id) || { color: '#888', name: `Vehicle ${routeData.vehicle_id}` };
            
-           const assignedDestinations = (routeData.route_sequence || [])
-             .filter(seq => seq !== 'Depot')
-             .map(seq => destinations.find(d => d.node_id === parseInt(seq)))
-             .filter(Boolean);
+           const assignedDestinations = [];
+           const rawSequence = routeData.route_sequence || routeData.sequence || routeData.route || [];
+           
+           if (rawSequence.length > 0) {
+               rawSequence.forEach(seq => {
+                   if (seq === 'Depot' || seq === 0 || seq === '0') return;
+                   let match = destinations.find(d => d.node_id === seq || d.node_id === parseInt(seq) || d.node_id === String(seq) || d.display_id === String(seq));
+                   if (match) assignedDestinations.push(match);
+               });
+           }
+           
+           // Robust fallback: Match by geographic coordinates if sequence is missing or mismatched
+           if (assignedDestinations.length === 0 && routeData.path) {
+               destinations.forEach(d => {
+                   const isInPath = routeData.path.some(p => {
+                       const pLat = p.lat || p.latitude || (Array.isArray(p) ? p[0] : null);
+                       const pLng = p.lng || p.longitude || (Array.isArray(p) ? p[1] : null);
+                       if (pLat === null || pLng === null) return false;
+                       return Math.abs(Number(pLat) - d.latitude) < 0.0001 && Math.abs(Number(pLng) - d.longitude) < 0.0001;
+                   });
+                   if (isInPath) {
+                       assignedDestinations.push(d);
+                   }
+               });
+           }
 
            const sequenceDisplay = (routeData.route_sequence || []).map(seq => {
              if (seq === 'Depot') return 'Depot';
@@ -711,7 +740,7 @@ function App() {
                 )}
                 
                 {isOptimized && (
-                  <div className="results-overlay" style={{position: 'absolute', top: '20px', right: '20px', zIndex: 1000, background: 'rgba(20,20,20,0.85)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(10px)', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', minWidth: '220px'}}>
+                  <div className="results-overlay" style={{position: 'absolute', top: '20px', right: '20px', zIndex: 1000, background: 'var(--bg-primary)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border-color)', color: 'var(--text-primary)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', minWidth: '220px'}}>
                     <h3 style={{margin: '0 0 10px 0', fontSize: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px'}}>Optimization Results</h3>
                     <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
                       <div>
@@ -770,7 +799,7 @@ function App() {
                     <Marker
                       key={`${v.id}-${d.node_id}`}
                       position={[d.latitude, d.longitude]}
-                      icon={createDestIcon(v.color, d.display_id)}
+                      icon={createSimpleDotIcon(v.color)}
                       opacity={isFaded ? 0.3 : 1}
                       zIndexOffset={isActive ? 100 : 0}
                     >
@@ -794,7 +823,6 @@ function App() {
                       color={v.color}
                       weight={isActive ? 5 : 3}
                       opacity={isFaded ? 0.2 : 0.8}
-                      dashArray={isActive ? null : "5, 10"}
                     />
                   );
                 })}
