@@ -831,7 +831,7 @@ function App() {
                       <Polyline
                         positions={v.routePath}
                         color="#ffffff"
-                        weight={isActive ? 8 : 6}
+                        weight={isActive ? 12 : 9}
                         opacity={isFaded ? 0.3 : 1.0}
                         lineCap="round"
                         lineJoin="round"
@@ -840,7 +840,7 @@ function App() {
                       <Polyline
                         positions={v.routePath}
                         color={v.color}
-                        weight={isActive ? 5 : 4}
+                        weight={isActive ? 7 : 5}
                         opacity={isFaded ? 0.2 : 0.9}
                         lineCap="round"
                         lineJoin="round"
