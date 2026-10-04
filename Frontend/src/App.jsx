@@ -304,6 +304,18 @@ function App() {
     ));
   };
 
+  const removeVehicle = (id) => {
+    setFleet(current => {
+      const newFleet = current.filter(v => v.id !== id);
+      // Re-assign IDs and names to keep them sequential 1, 2, 3...
+      return newFleet.map((v, i) => ({
+        ...v,
+        id: i + 1,
+        name: `Vehicle ${i + 1}`
+      }));
+    });
+  };
+
   const handleRoute = async () => {
     if (!depot) {
       alert("Please select a depot on the map.");
@@ -702,6 +714,9 @@ function App() {
                               title="Capacity (kg)"
                             />
                             <span style={{fontSize: '11px', color: 'var(--text-secondary)'}}>kg</span>
+                            {fleet.length > 1 && (
+                              <span onClick={() => removeVehicle(v.id)} style={{cursor: 'pointer', color: '#ff4444', marginLeft: '6px', fontSize: '18px', fontWeight: 'bold'}} title="Remove Vehicle">×</span>
+                            )}
                           </div>
                         </div>
                       ))}
