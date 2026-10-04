@@ -804,11 +804,11 @@ function App() {
                   const isFaded = activeVehicleId !== null && activeVehicleId !== v.id;
                   const isActive = activeVehicleId === v.id;
                   if (!v.destinations) return null;
-                  return v.destinations.map(d => (
-                    <Marker
-                      key={`${v.id}-${d.node_id}`}
-                      position={[d.latitude, d.longitude]}
-                      icon={createDestIcon(v.color, d.display_id)}
+                    return v.destinations.map(d => (
+                      <Marker
+                        key={`${v.id}-${d.node_id}-${isActive}`}
+                        position={[d.latitude, d.longitude]}
+                        icon={createDestIcon(v.color, d.display_id)}
                       opacity={isFaded ? 0.3 : 1}
                       zIndexOffset={isActive ? 100 : 0}
                     >
@@ -826,7 +826,7 @@ function App() {
                   const isFaded = activeVehicleId !== null && activeVehicleId !== v.id;
                   const isActive = activeVehicleId === v.id;
                   return (
-                    <React.Fragment key={v.id}>
+                    <React.Fragment key={`${v.id}-${isActive}`}>
                       {/* Outline / Border */}
                       <Polyline
                         positions={v.routePath}
