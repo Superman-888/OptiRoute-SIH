@@ -440,10 +440,8 @@ function App() {
              return [Number(p.lat || p.latitude), Number(p.lng || p.longitude)];
            }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
            
-           const routeTimeInMinutes = (routeData.time || 0) / 60;
-           
            totalDist += routeData.distance || 0;
-           totalTime += routeTimeInMinutes;
+           totalTime += routeData.time || 0;
            totalStops += assignedDestinations.length;
 
            return {
@@ -451,7 +449,7 @@ function App() {
              destinations: assignedDestinations,
              routePath: safePath,
              routeDistance: Number(routeData.distance).toFixed(2),
-             routeTime: routeTimeInMinutes.toFixed(2),
+             routeTime: Number(routeData.time).toFixed(2),
              totalLoad: routeData.total_demand || assignedDestinations.reduce((s, d) => s + d.demand, 0),
              utilization: routeData.utilization,
              sequenceDisplay: sequenceDisplay,
