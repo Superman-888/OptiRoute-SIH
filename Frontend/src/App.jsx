@@ -826,13 +826,26 @@ function App() {
                   const isFaded = activeVehicleId !== null && activeVehicleId !== v.id;
                   const isActive = activeVehicleId === v.id;
                   return (
-                    <Polyline
-                      key={v.id}
-                      positions={v.routePath}
-                      color={v.color}
-                      weight={isActive ? 5 : 3}
-                      opacity={isFaded ? 0.2 : 0.8}
-                    />
+                    <React.Fragment key={v.id}>
+                      {/* Outline / Border */}
+                      <Polyline
+                        positions={v.routePath}
+                        color="#ffffff"
+                        weight={isActive ? 8 : 6}
+                        opacity={isFaded ? 0.3 : 1.0}
+                        lineCap="round"
+                        lineJoin="round"
+                      />
+                      {/* Inner Colored Route */}
+                      <Polyline
+                        positions={v.routePath}
+                        color={v.color}
+                        weight={isActive ? 5 : 4}
+                        opacity={isFaded ? 0.2 : 0.9}
+                        lineCap="round"
+                        lineJoin="round"
+                      />
+                    </React.Fragment>
                   );
                 })}
 
