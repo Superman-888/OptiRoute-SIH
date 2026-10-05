@@ -837,7 +837,7 @@ function App() {
                   if (!v.destinations) return null;
                     return v.destinations.map(d => (
                       <Marker
-                        key={`${v.id}-${d.node_id}-${isActive}`}
+                        key={`${v.id}-${d.node_id}-${activeVehicleId || 'none'}`}
                         position={[d.latitude, d.longitude]}
                         icon={createDestIcon(v.color, d.display_id)}
                       opacity={isFaded ? 0.3 : 1}
@@ -857,9 +857,10 @@ function App() {
                   const isFaded = activeVehicleId !== null && activeVehicleId !== v.id;
                   const isActive = activeVehicleId === v.id;
                   return (
-                    <React.Fragment key={`${v.id}-${isActive}`}>
+                    <React.Fragment key={`${v.id}-${activeVehicleId || 'none'}`}>
                       {/* Outline / Border */}
                       <Polyline
+                        key={`outline-${v.id}-${activeVehicleId || 'none'}`}
                         positions={v.routePath}
                         color="#ffffff"
                         weight={isActive ? 10 : 7}
@@ -869,6 +870,7 @@ function App() {
                       />
                       {/* Inner Colored Route */}
                       <Polyline
+                        key={`inner-${v.id}-${activeVehicleId || 'none'}`}
                         positions={v.routePath}
                         color={v.color}
                         weight={isActive ? 6 : 4}
