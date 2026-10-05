@@ -429,7 +429,6 @@ function Dashboard({ distance, estimatedTime, capacities, summary, convergenceHi
             <div className="summary-card"><span>Total Distance</span><strong>{runSummary.totalDistance} km</strong></div>
             <div className="summary-card"><span>Total Travel Time</span><strong>{runSummary.totalTravelTime ?? "—"} min</strong></div>
             <div className="summary-card"><span>Vehicles Used</span><strong>{runSummary.vehiclesUsed === null ? "—" : runSummary.vehiclesUsed} / {runSummary.vehiclesAvailable ?? "—"}</strong></div>
-            <div className="summary-card"><span>Capacity Utilization</span><strong>{runSummary.capacityUtilization === null ? "—" : `${runSummary.capacityUtilization}%`}</strong></div>
             <div className="summary-card"><span>Constraint Violations</span><strong>{runSummary.constraintViolations === null ? "—" : runSummary.constraintViolations}</strong></div>
           </div>
         )}
